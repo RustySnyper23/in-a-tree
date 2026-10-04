@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}Chat{% endblock %}
+{% block content %}
+<div id="head" class="chat-head"></div>
+<div class="card">
+  <div id="box" class="chat-box"></div>
+  <div class="chat-input">
+    <input type="text" id="msg" maxlength="2000" placeholder="Say something…" autocomplete="off">
+    <button class="btn btn-hot" id="send">Send</button>
+  </div>
+</div>
+
+<dialog id="report-dialog" class="report-dialog">
+  <h3>Report this person</h3>
+  <textarea id="report-reason" placeholder="Describe the problem…"></textarea>
+  <div class="form-err" id="report-err"></div>
+  <div style="display:flex;gap:10px;margin-top:14px;">
+    <button class="btn btn-hot btn-sm" id="report-send">Send report</button>
+    <button class="btn btn-ghost btn-sm" id="report-cancel">Cancel</button>
+  </div>
+</dialog>
+{% endblock %}
+{% block scripts %}
+<script>
+const MATCH_ID = {{ match_id }};
+let lastId = 0;
+let partnerId = null;
+
+function renderMsg(m) {
+  const cls = m.sender_id === ME.id ? "me" : "them";
+  const t = new Date(m.created_at + "Z").toLocaleString();
+  return `<div class="msg ${cls}">${esc(m.body)}<span class="t">${esc(t)}</span></div>`;
+}
+
+async function loadHead() {
+  const r = await get("/api/matches/" + MATCH_ID);
+  const p = r.match.partner;
+  partnerId = p.user_id;
+  const ava = p.photo_url ? `<img class="match-ava" src="${esc(p.photo_url)}" alt="">` : `<div class="match-ava">★</div>`;
+  document.getElementById("head").innerHTML = `${ava}
+    <div><div class="who" style="font-weight:800;font-size:1.2rem">${esc(p.display_name)}, ${p.age}</div>
+    <div style="color:var(--muted)">${esc(p.city)}, Texas</div></div>
+    <div class="chat-actions">
+      <button class="btn btn-ghost btn-sm" id="h-report">Report</button>
+      <button class="btn btn-ghost btn-sm" id="h-block">Block</button>
+    </div>`;
+  document.getElementById("h-report").onclick = () => {
+    document.getElementById("report-err").textContent = "";
+    document.getElementById("report-reason").value = "";
+    document.getElementById("report-dialog").showModal();
+  };
+  document.getElementById("h-block").onclick = async () => {
+    if (!confirm("Block this person? The conversation disappears for both of you.")) return;
+    await post("/api/block", { user_id: partnerId });
+    location.href = "/matches";
+  };
+}
+
+async function poll() {
+  try {
+    const r = await get(`/api/matches/${MATCH_ID}/messages?after=${lastId}`);
+    const box = document.getElementById("box");
+    r.messages.forEach((m) => {
+      box.insertAdjacentHTML("beforeend", renderMsg(m));
+      lastId = Math.max(lastId, m.id);
+    });
+    if (r.messages.length) box.scrollTop = box.scrollHeight;
+  } catch (e) { /* keep polling */ }
+}
+
+async function send() {
+  const input = document.getElementById("msg");
+  const body = input.value.trim();
+  if (!body) return;
+  input.value = "";
+  try { await post(`/api/matches/${MATCH_ID}/messages`, { body }); }
+  catch (e) { input.value = body; alert(e.message); return; }
+  poll();
+}
+
+document.getElementById("send").onclick = send;
+document.getElementById("msg").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") send();
+});
+document.getElementById("report-cancel").onclick = () =>
+  document.getElementById("report-dialog").close();
+document.getElementById("report-send").onclick = async () => {
+  try {
+    await post("/api/report", { user_id: partnerId, reason: document.getElementById("report-reason").value });
+    document.getElementById("report-dialog").close();
+    alert("Report sent. Thanks for keeping it safe.");
+  } catch (e) {
+    document.getElementById("report-err").textContent = e.message;
+  }
+};
+
+document.addEventListener("DOMContentLoaded", async () => {
+  await loadMe();
+  if (!ME) { location.href = "/login"; return; }
+  try { await loadHead(); }
+  catch (e) { location.href = "/matches"; return; }
+  await poll();
+  setInterval(poll, 3000);
+});
+</script>
+{% endblock %}

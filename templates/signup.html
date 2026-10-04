@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Join free{% endblock %}
+{% block content %}
+<div class="card" style="max-width:520px;margin:30px auto;">
+  <h2>Join free <span class="brand-star">★</span></h2>
+  <p style="color:var(--muted)">18+ only. Takes two minutes. Costs nothing, forever.</p>
+  <div class="form-err" id="err"></div>
+  <form id="f">
+    <label>Email</label>
+    <input type="email" id="email" required autocomplete="email">
+    <label>Password (min 8 characters)</label>
+    <input type="password" id="password" required minlength="8" autocomplete="new-password">
+    <label>Display name</label>
+    <input type="text" id="display_name" required maxlength="40" placeholder="What should people call you?">
+    <label>Age (must be 18+)</label>
+    <input type="number" id="age" required min="18" max="120">
+    <label>I am a…</label>
+    <select id="gender" required>
+      <option value="">— select —</option>
+      {% for g in genders %}<option value="{{ g }}">{{ g }}</option>{% endfor %}
+    </select>
+    <label>City in Texas</label>
+    <select id="city" required>
+      <option value="">— select —</option>
+      {% for c in cities %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+    </select>
+    <div style="margin-top:20px;">
+      <button class="btn btn-hot" type="submit" style="width:100%">Create my free account</button>
+    </div>
+  </form>
+  <p style="color:var(--muted)">Already here? <a href="/login">Log in</a></p>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+document.getElementById("f").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const err = document.getElementById("err");
+  err.textContent = "";
+  const v = (id) => document.getElementById(id).value;
+  try {
+    await post("/api/signup", {
+      email: v("email"), password: v("password"), display_name: v("display_name"),
+      age: v("age"), gender: v("gender"), city: v("city"),
+    });
+    location.href = "/browse";
+  } catch (ex) { err.textContent = ex.message; }
+});
+</script>
+{% endblock %}

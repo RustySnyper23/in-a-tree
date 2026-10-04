@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Admin{% endblock %}
+{% block content %}
+<h2>Owner dashboard <span class="brand-star">★</span></h2>
+<div id="gate" class="empty hidden"><h3>Admins only.</h3></div>
+<div id="panel" class="hidden">
+  <div class="stat-grid" id="stats"></div>
+  <div class="card">
+    <h3>Open reports</h3>
+    <div id="reports">Loading…</div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function action(id, act, label) {
+  if (!confirm(label + "?")) return;
+  await post(`/api/admin/reports/${id}`, { action: act });
+  load();
+}
+async function load() {
+  let s;
+  try { s = await get("/api/admin/stats"); }
+  catch (e) { document.getElementById("gate").classList.remove("hidden"); return; }
+  document.getElementById("panel").classList.remove("hidden");
+  document.getElementById("stats").innerHTML = `
+    <div class="stat"><div class="n">${s.users}</div><div class="l">users</div></div>
+    <div class="stat"><div class="n">${s.matches}</div><div class="l">matches</div></div>
+    <div class="stat"><div class="n">${s.messages}</div><div class="l">messages</div></div>
+    <div class="stat"><div class="n">${s.open_reports}</div><div class="l">open reports</div></div>
+    <div class="stat"><div class="n">${s.banned}</div><div class="l">banned</div></div>`;
+  const r = await get("/api/admin/reports?status=open");
+  document.getElementById("reports").innerHTML = r.reports.length ? `
+    <table class="reports"><tr><th>When</th><th>Reported user</th><th>Reporter</th><th>Reason</th><th></th></tr>
+    ${r.reports.map((x) => `<tr>
+      <td>${esc(x.created_at)}</td>
+      <td>${esc(x.reported_name)} (#${x.reported_id})</td>
+      <td>${esc(x.reporter_name)}</td>
+      <td>${esc(x.reason)}</td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-ghost btn-sm" data-a="dismiss" data-id="${x.id}">Dismiss</button>
+        <button class="btn btn-hot btn-sm" data-a="ban" data-id="${x.id}">Ban user</button>
+      </td></tr>`).join("")}</table>`
+    : "<p style='color:var(--muted)'>No open reports. Quiet out there. ★</p>";
+  document.querySelectorAll("[data-a]").forEach((b) => {
+    b.onclick = () => action(b.dataset.id, b.dataset.a,
+      b.dataset.a === "ban" ? "Ban this user permanently" : "Dismiss this report");
+  });
+}
+document.addEventListener("DOMContentLoaded", async () => { await loadMe(); load(); });
+</script>
+{% endblock %}

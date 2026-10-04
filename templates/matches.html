@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Matches{% endblock %}
+{% block content %}
+<h2>Your matches <span class="brand-star">★</span></h2>
+<p style="color:var(--muted)">Mutual likes only. Message as much as you want — it's all free.</p>
+<div id="list"></div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function load() {
+  let r;
+  try { r = await get("/api/matches"); }
+  catch (e) { location.href = "/login"; return; }
+  const el = document.getElementById("list");
+  if (!r.matches.length) {
+    el.innerHTML = `<div class="empty"><h3>No matches yet</h3><p>Go <a href="/browse">browse</a> and start liking. 🔥</p></div>`;
+    return;
+  }
+  el.innerHTML = r.matches.map((m) => {
+    const p = m.partner || {};
+    const ava = p.photo_url
+      ? `<img class="match-ava" src="${esc(p.photo_url)}" alt="">`
+      : `<div class="match-ava">★</div>`;
+    const last = m.last_message ? esc(m.last_message.body) : "Say hello…";
+    return `<a class="match-row" href="/chat/${m.match_id}">
+      ${ava}
+      <div><div class="who">${esc(p.display_name || "?")}, ${p.age || ""}</div>
+      <div class="last">${last}</div></div>
+    </a>`;
+  }).join("");
+}
+document.addEventListener("DOMContentLoaded", load);
+</script>
+{% endblock %}

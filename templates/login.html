@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Log in{% endblock %}
+{% block content %}
+<div class="card" style="max-width:520px;margin:30px auto;">
+  <h2>Welcome back <span class="brand-star">★</span></h2>
+  <div class="form-err" id="err"></div>
+  <form id="f">
+    <label>Email</label>
+    <input type="email" id="email" required autocomplete="email">
+    <label>Password</label>
+    <input type="password" id="password" required autocomplete="current-password">
+    <div style="margin-top:20px;">
+      <button class="btn btn-hot" type="submit" style="width:100%">Log in</button>
+    </div>
+  </form>
+  <p style="color:var(--muted)">New here? <a href="/signup">Join free</a></p>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+document.getElementById("f").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const err = document.getElementById("err");
+  err.textContent = "";
+  try {
+    await post("/api/login", {
+      email: document.getElementById("email").value,
+      password: document.getElementById("password").value,
+    });
+    location.href = "/browse";
+  } catch (ex) { err.textContent = ex.message; }
+});
+</script>
+{% endblock %}

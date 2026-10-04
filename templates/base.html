@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}In a Tree{% endblock %} — Free 18+ Texas Dating</title>
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<!-- 18+ age gate -->
+<div id="agegate" class="agegate hidden">
+  <div class="agegate-card">
+    <div class="agegate-star">★</div>
+    <h1>IN A TREE</h1>
+    <p class="tagline">Free Texas dating for grown folks.</p>
+    <p class="age-q">Are you 18 or older?</p>
+    <div class="age-btns">
+      <button id="age-yes" class="btn btn-hot">Yes, I'm 18+</button>
+      <a href="https://www.google.com" class="btn btn-ghost">No, take me away</a>
+    </div>
+    <p class="fine">This site is for adults only. 100% free — no payments, no premium, ever.</p>
+  </div>
+</div>
+
+<header class="topbar">
+  <a href="/" class="brand"><span class="brand-star">★</span> IN A TREE</a>
+  <nav id="nav-links" class="navlinks">
+    <a href="/browse" data-auth="in">Browse</a>
+    <a href="/matches" data-auth="in">Matches</a>
+    <a href="/safety">Safety</a>
+    <a href="/profile" data-auth="in">My Profile</a>
+    <a href="/admin" data-auth="admin">Admin</a>
+    <a href="/login" data-auth="out">Log in</a>
+    <a href="/signup" data-auth="out" class="btn btn-hot btn-sm">Join free</a>
+    <button id="logout-btn" data-auth="in" class="btn btn-ghost btn-sm">Log out</button>
+  </nav>
+</header>
+
+<main class="wrap">
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="footer">
+  <p><span class="brand-star">★</span> In a Tree — free 18+ Texas dating. No payments. No premium. Ever.</p>
+  <p><a href="/safety">Safety tips</a> · Be kind. Be honest. Be safe.</p>
+  {% if demo_mode %}<p class="demo-banner">DEMO MODE is on: sample profiles are clearly labeled and are not real people.</p>{% endif %}
+</footer>
+
+<script src="/static/js/app.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

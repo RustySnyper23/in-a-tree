@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Browse{% endblock %}
+{% block content %}
+<div id="need-login" class="empty hidden">
+  <h2>Log in to start browsing <span class="brand-star">★</span></h2>
+  <p><a href="/login" class="btn btn-hot">Log in</a> <a href="/signup" class="btn btn-ghost">Join free</a></p>
+</div>
+<div id="deck"></div>
+<div id="done" class="empty hidden">
+  <h2>That's everyone for now <span class="brand-star">★</span></h2>
+  <p>Check back soon — new Texans join every day. Or polish your <a href="/profile">profile</a> while you wait.</p>
+</div>
+
+<dialog id="report-dialog" class="report-dialog">
+  <h3>Report this profile</h3>
+  <p style="color:var(--muted)">What happened? Reports go to the site owner for review.</p>
+  <textarea id="report-reason" placeholder="Describe the problem…"></textarea>
+  <div class="form-err" id="report-err"></div>
+  <div style="display:flex;gap:10px;margin-top:14px;">
+    <button class="btn btn-hot btn-sm" id="report-send">Send report</button>
+    <button class="btn btn-ghost btn-sm" id="report-cancel">Cancel</button>
+  </div>
+</dialog>
+{% endblock %}
+{% block scripts %}
+<script>
+let queue = [];
+let current = null;
+
+function cardHTML(p) {
+  const photo = p.photo_url
+    ? `<img class="profile-photo" src="${esc(p.photo_url)}" alt="profile photo">`
+    : `<div class="photo-ph">★</div>`;
+  return `<div class="card profile-card">
+    ${p.is_demo ? `<span class="demo-tag">DEMO PROFILE — not a real person</span>` : ``}
+    ${photo}
+    <h2>${esc(p.display_name)}, ${p.age}</h2>
+    <div class="profile-meta">${esc(p.gender)} · ${esc(p.city)}, Texas</div>
+    <div class="profile-fields">
+      ${p.bio ? `<div><b>About:</b> ${esc(p.bio)}</div>` : ``}
+      ${p.interests ? `<div><b>Into:</b> ${esc(p.interests)}</div>` : ``}
+      ${p.looking_for ? `<div><b>Looking for:</b> ${esc(p.looking_for)}</div>` : ``}
+    </div>
+    <div class="like-row">
+      <button class="btn btn-pass" id="pass-btn">✕ Pass</button>
+      <button class="btn btn-hot" id="like-btn">♥ Like</button>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:8px;justify-content:center;">
+      <button class="btn btn-ghost btn-sm" id="report-btn">Report</button>
+      <button class="btn btn-ghost btn-sm" id="block-btn">Block</button>
+    </div>
+  </div>`;
+}
+
+function showNext() {
+  const deck = document.getElementById("deck");
+  current = queue.shift();
+  if (!current) {
+    deck.innerHTML = "";
+    document.getElementById("done").classList.remove("hidden");
+    return;
+  }
+  document.getElementById("done").classList.add("hidden");
+  deck.innerHTML = cardHTML(current);
+  document.getElementById("like-btn").onclick = () => decide(true);
+  document.getElementById("pass-btn").onclick = () => decide(false);
+  document.getElementById("report-btn").onclick = openReport;
+  document.getElementById("block-btn").onclick = doBlock;
+}
+
+async function decide(liked) {
+  try {
+    const r = await post("/api/like", { user_id: current.user_id, liked });
+    if (r.matched) {
+      alert("It's a match! 🔥 Head to Matches to start messaging.");
+      location.href = "/matches";
+      return;
+    }
+  } catch (e) { /* still advance */ }
+  showNext();
+}
+
+async function loadQueue() {
+  try {
+    const r = await get("/api/browse");
+    queue = r.profiles;
+    showNext();
+  } catch (e) {
+    document.getElementById("need-login").classList.remove("hidden");
+  }
+}
+
+function openReport() {
+  document.getElementById("report-err").textContent = "";
+  document.getElementById("report-reason").value = "";
+  document.getElementById("report-dialog").showModal();
+}
+document.getElementById("report-cancel").onclick = () =>
+  document.getElementById("report-dialog").close();
+document.getElementById("report-send").onclick = async () => {
+  const reason = document.getElementById("report-reason").value;
+  try {
+    await post("/api/report", { user_id: current.user_id, reason });
+    document.getElementById("report-dialog").close();
+    alert("Report sent. Thanks for keeping it safe.");
+    showNext();
+  } catch (e) {
+    document.getElementById("report-err").textContent = e.message;
+  }
+};
+
+async function doBlock() {
+  if (!confirm("Block this person? You won't see each other anymore.")) return;
+  await post("/api/block", { user_id: current.user_id });
+  showNext();
+}
+
+document.addEventListener("DOMContentLoaded", loadQueue);
+</script>
+{% endblock %}

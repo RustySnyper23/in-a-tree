@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}My profile{% endblock %}
+{% block content %}
+<div class="card" style="max-width:620px;margin:24px auto;">
+  <h2>My profile <span class="brand-star">★</span></h2>
+  <div class="form-err" id="err"></div>
+  <div class="form-ok" id="ok"></div>
+
+  <div style="text-align:center;margin-bottom:10px;">
+    <div id="photo-prev"></div>
+    <label>Profile photo</label>
+    <input type="file" id="photo" accept="image/png,image/jpeg,image/gif,image/webp">
+    <div style="margin-top:10px;"><button class="btn btn-ghost btn-sm" id="upload-btn">Upload photo</button></div>
+  </div>
+
+  <form id="f">
+    <label>Display name</label>
+    <input type="text" id="display_name" maxlength="40" required>
+    <label>Age (18+)</label>
+    <input type="number" id="age" min="18" max="120" required>
+    <label>I am a…</label>
+    <select id="gender" required>
+      {% for g in genders %}<option value="{{ g }}">{{ g }}</option>{% endfor %}
+    </select>
+    <label>City in Texas</label>
+    <select id="city" required>
+      {% for c in cities %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+    </select>
+    <label>About me</label>
+    <textarea id="bio" maxlength="500" placeholder="A few lines that show who you are…"></textarea>
+    <label>I'm into…</label>
+    <textarea id="interests" maxlength="300" placeholder="Interests, vibes, turn-ons…"></textarea>
+    <label>Looking for…</label>
+    <textarea id="looking_for" maxlength="300" placeholder="Casual fun? Something regular? Say it plainly."></textarea>
+    <div style="margin-top:20px;">
+      <button class="btn btn-hot" type="submit" style="width:100%">Save profile</button>
+    </div>
+  </form>
+
+  <h3 style="margin-top:30px;">Blocked people</h3>
+  <div id="blocks" style="color:var(--muted)">Loading…</div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function fill(p) {
+  document.getElementById("display_name").value = p.display_name || "";
+  document.getElementById("age").value = p.age || "";
+  document.getElementById("gender").value = p.gender || "";
+  document.getElementById("city").value = p.city || "";
+  document.getElementById("bio").value = p.bio || "";
+  document.getElementById("interests").value = p.interests || "";
+  document.getElementById("looking_for").value = p.looking_for || "";
+  document.getElementById("photo-prev").innerHTML = p.photo_url
+    ? `<img src="${esc(p.photo_url)}" style="width:160px;height:200px;object-fit:cover;border-radius:14px;border:1px solid var(--line)">`
+    : `<div class="photo-ph" style="max-width:160px;aspect-ratio:4/5;font-size:2.5rem;">★</div>`;
+}
+
+async function load() {
+  try {
+    const r = await get("/api/profile");
+    fill(r.profile);
+  } catch (e) { location.href = "/login"; return; }
+  const b = await get("/api/blocks");
+  document.getElementById("blocks").innerHTML = b.blocked.length
+    ? b.blocked.map((p) => `<div>${esc(p.display_name)} <button class="btn btn-ghost btn-sm" data-unblock="${p.user_id}">Unblock</button></div>`).join("")
+    : "Nobody blocked.";
+  document.querySelectorAll("[data-unblock]").forEach((btn) => {
+    btn.onclick = async () => { await del("/api/block/" + btn.dataset.unblock); load(); };
+  });
+}
+
+document.getElementById("f").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const err = document.getElementById("err"), ok = document.getElementById("ok");
+  err.textContent = ""; ok.textContent = "";
+  const v = (id) => document.getElementById(id).value;
+  try {
+    await put("/api/profile", {
+      display_name: v("display_name"), age: v("age"), gender: v("gender"),
+      city: v("city"), bio: v("bio"), interests: v("interests"), looking_for: v("looking_for"),
+    });
+    ok.textContent = "Saved. Looking good. 🔥";
+  } catch (ex) { err.textContent = ex.message; }
+});
+
+document.getElementById("upload-btn").addEventListener("click", async () => {
+  const err = document.getElementById("err"), ok = document.getElementById("ok");
+  err.textContent = ""; ok.textContent = "";
+  const file = document.getElementById("photo").files[0];
+  if (!file) { err.textContent = "Pick a photo first."; return; }
+  const fd = new FormData();
+  fd.append("photo", file);
+  const res = await fetch("/api/profile/photo", { method: "POST", body: fd });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) { err.textContent = body.error || "Upload failed."; return; }
+  ok.textContent = "Photo uploaded. 🔥";
+  load();
+});
+
+document.addEventListener("DOMContentLoaded", load);
+</script>
+{% endblock %}
