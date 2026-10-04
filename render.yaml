@@ -1,0 +1,14 @@
+# Render hosting config for In a Tree (free tier friendly)
+services:
+  - type: web
+    name: in-a-tree
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ADMIN_EMAIL
+        value: robubba42@gmail.com
+      - key: DEMO_MODE
+        value: "false"
